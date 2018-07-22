@@ -67,21 +67,25 @@ def recodeSubs(target):
         comFfmpeg = 'ffmpeg -i \"' + target + '\" '
         for i in submap:
             name = target[:-3] + i['tags']['language'] + '.' + str(i['index'])
-            comFfmpeg += '-i \"' + name + '.srt\" '
-        comFfmpeg = comFfmpeg + '-map 0 '
-        for i in submap:
-            comFfmpeg = comFfmpeg + '-map -0:' + str(i['index']) + ' '
-        for i in range(1, len(submap) + 1):
-            comFfmpeg = comFfmpeg + '-map ' + str(i) + ' '
-        comFfmpeg = comFfmpeg + '-c copy -f matroska \"' + target + '.temp\"'
-        p = subprocess.run(comFfmpeg, cwd=cwdir, shell=True)
-        print(p)
-        if(p.returncode == 0):
-            shutil.move(fulltarget + '.temp', fulltarget)
+            if os.path.isfile(os.path.join(cwdir, name + '.srt')):
+                comFfmpeg += '-i \"' + name + '.srt\" '
+            else:
+                submap.remove(i)
+        if(len(submap)>0):
+            comFfmpeg = comFfmpeg + '-map 0 '
             for i in submap:
-                name = target[:-3] + i['tags']['language'] + '.' + str(i['index'])
-                if os.path.isfile(os.path.join(cwdir, name + '.srt')):
-                    os.remove(os.path.join(cwdir, name + '.srt'))
+                comFfmpeg = comFfmpeg + '-map -0:' + str(i['index']) + ' '
+            for i in range(1, len(submap) + 1):
+                comFfmpeg = comFfmpeg + '-map ' + str(i) + ' '
+            comFfmpeg = comFfmpeg + '-c copy -f matroska \"' + target + '.temp\"'
+            p = subprocess.run(comFfmpeg, cwd=cwdir, shell=True)
+            print(p)
+            if(p.returncode == 0):
+                shutil.move(fulltarget + '.temp', fulltarget)
+                for i in submap:
+                    name = target[:-3] + i['tags']['language'] + '.' + str(i['index'])
+                    if os.path.isfile(os.path.join(cwdir, name + '.srt')):
+                        os.remove(os.path.join(cwdir, name + '.srt'))
 
 def convSubStream(target, stream):
     fulltarget = os.path.abspath(target)
@@ -96,10 +100,12 @@ def convSubStream(target, stream):
     #com = comExtract + ' && ' + comSup2Sub + ' && ' + comSub2Srt
     p = subprocess.run(comExtract, cwd=cwdir, shell=True)
     print(p)
-    p = subprocess.run(comSup2Sub, cwd=cwdir, shell=True)
-    print(p)
-    p = subprocess.run(comSub2Srt, cwd=cwdir, shell=True)
-    print(p)
+    if p.returncode == 0:
+        p = subprocess.run(comSup2Sub, cwd=cwdir, shell=True)
+        print(p)
+    if p.returncode == 0:
+        p = subprocess.run(comSub2Srt, cwd=cwdir, shell=True)
+        print(p)
     if os.path.isfile(os.path.join(cwdir, name + '.sup')):
         os.remove(os.path.join(cwdir, name + '.sup'))
     if os.path.isfile(os.path.join(cwdir, name + '.sub')):
